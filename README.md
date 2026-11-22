@@ -45,3 +45,13 @@ Fortschritt und Spielstand werden im `localStorage` des Browsers gespeichert.
 | T | Tipp |
 | F | Rivalenzug vorspulen |
 | P, Esc | Pause |
+
+---
+
+# J.A.R.V.I.S.
+
+Ein persönlicher Sprachassistent für den Browser in `jarvis.html`. Online erreichbar unter `https://<benutzer>.github.io/kachel/jarvis.html`.
+
+- **Sprechen:** Reaktor oder „MIKRO“ antippen. Mit „Dauerhaft zuhören“ reagiert Jarvis auf das Wort „Jarvis …“. Am besten in Chrome oder Edge.
+- **Ohne API-Schlüssel:** Uhrzeit, Datum, Timer, Notizen, Wetter (Open-Meteo), Rechnen, Webseiten öffnen, Google-Suche, Wikipedia, Witze.
+- **Mit Anthropic-API-Schlüssel** (Einstellungen): freie Gespräche mit Claude, inklusive Websuche. Claude kann dieselben Werkzeuge (Timer, Notizen, Wetter, Links) selbst nutzen. Der Schlüssel wird nur im `localStorage` des Browsers gespeichert und direkt an die Anthropic-API geschickt, also nur auf eigenen Geräten verwenden.

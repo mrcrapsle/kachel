@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>J.A.R.V.I.S.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #03080f;
+    --panel: rgba(8, 24, 38, .72);
+    --line: rgba(80, 200, 255, .28);
+    --cyan: #4fd6ff;
+    --cyan-dim: #1c7fa3;
+    --text: #d6f3ff;
+    --muted: #7fa9bd;
+    --warn: #ffb347;
+    --err: #ff5d6c;
+    --me: rgba(79, 214, 255, .14);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: radial-gradient(ellipse at 50% 30%, #0a2236 0%, var(--bg) 65%) fixed, var(--bg);
+    color: var(--text);
+    font-family: Rajdhani, system-ui, sans-serif;
+    font-size: 17px;
+    display: flex; flex-direction: column; align-items: center;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none;
+    background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 48px 48px; opacity: .18;
+    mask-image: radial-gradient(ellipse at center, #000 20%, transparent 75%);
+  }
+  header {
+    width: 100%; max-width: 980px; padding: 14px 16px 0;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  }
+  h1 { font-family: Orbitron, sans-serif; font-size: 20px; letter-spacing: .35em; margin: 0; color: var(--cyan); text-shadow: 0 0 12px rgba(79,214,255,.6); }
+  .stat { font-family: Orbitron, sans-serif; font-size: 11px; letter-spacing: .15em; color: var(--muted); text-align: right; }
+  .stat b { color: var(--cyan); font-weight: 500; }
+  button {
+    font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 12px; cursor: pointer;
+  }
+  button:hover { border-color: var(--cyan); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  main { width: 100%; max-width: 980px; padding: 0 16px 16px; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  #reactorWrap { position: relative; display: flex; justify-content: center; margin: 8px 0 4px; }
+  #reactor { width: min(300px, 70vw); height: min(300px, 70vw); cursor: pointer; }
+  #state { text-align: center; font-family: Orbitron, sans-serif; letter-spacing: .3em; font-size: 12px; color: var(--cyan); min-height: 18px; text-transform: uppercase; }
+  #interim { text-align: center; color: var(--muted); min-height: 22px; font-style: italic; }
+  #log {
+    flex: 1; min-height: 180px; max-height: 42vh; overflow-y: auto; margin: 10px 0;
+    padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .msg { max-width: 85%; padding: 8px 12px; border-radius: 10px; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.me { align-self: flex-end; background: var(--me); border: 1px solid var(--line); }
+  .msg.j { align-self: flex-start; border-left: 3px solid var(--cyan); background: rgba(0,0,0,.25); }
+  .msg.sys { align-self: center; color: var(--muted); font-size: 14px; }
+  .msg.err { align-self: center; color: var(--err); font-size: 14px; }
+  .msg a { color: var(--cyan); }
+  form { display: flex; gap: 8px; }
+  #input { flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  #mic { font-family: Orbitron, sans-serif; font-size: 12px; letter-spacing: .1em; min-width: 92px; }
+  #mic.on { background: rgba(79,214,255,.25); border-color: var(--cyan); box-shadow: 0 0 14px rgba(79,214,255,.45); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
+  .chip { font-size: 14px; padding: 5px 10px; border-radius: 999px; }
+  label.tog { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: 14px; cursor: pointer; }
+  dialog { background: #071623; color: var(--text); border: 1px solid var(--cyan-dim); border-radius: 14px; width: min(520px, calc(100vw - 32px)); padding: 20px; }
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  dialog h2 { font-family: Orbitron, sans-serif; font-size: 15px; letter-spacing: .2em; color: var(--cyan); margin-top: 0; }
+  dialog label { display: block; margin: 12px 0 4px; color: var(--muted); font-size: 14px; }
+  dialog input[type=password], dialog input[type=text], dialog select { width: 100%; font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  dialog p { color: var(--muted); font-size: 14px; line-height: 1.4; }
+  #timers { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .timer { font-family: Orbitron, sans-serif; font-size: 12px; border: 1px solid var(--warn); color: var(--warn); border-radius: 999px; padding: 3px 10px; }
+  @media (max-width: 560px) { h1 { font-size: 16px; letter-spacing: .25em; } .msg { max-width: 95%; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>J.A.R.V.I.S.</h1>
+  <div class="stat"><span id="clock">--:--:--</span><br>KI: <b id="aiState">LOKAL</b></div>
+</header>
+<main>
+  <div id="reactorWrap"><canvas id="reactor" width="600" height="600" title="Antippen zum Sprechen"></canvas></div>
+  <div id="state">Bereit</div>
+  <div id="interim"></div>
+  <div id="timers"></div>
+  <div id="log" aria-live="polite"></div>
+  <form id="form" autocomplete="off">
+    <button type="button" id="mic" aria-pressed="false">MIKRO</button>
+    <input id="input" placeholder="Frag Jarvis etwas …" aria-label="Nachricht an Jarvis">
+    <button type="submit">Senden</button>
+  </form>
+  <div class="row">
+    <label class="tog"><input type="checkbox" id="wake"> Dauerhaft zuhören („Jarvis …“)</label>
+    <label class="tog"><input type="checkbox" id="speak" checked> Sprachausgabe</label>
+    <span style="flex:1"></span>
+    <button type="button" class="chip" id="helpBtn">Befehle</button>
+    <button type="button" class="chip" id="clearBtn">Verlauf leeren</button>
+    <button type="button" class="chip" id="setBtn">Einstellungen</button>
+  </div>
+</main>
+
+<dialog id="settings">
+  <form method="dialog">
+    <h2>EINSTELLUNGEN</h2>
+    <label for="name">Wie soll Jarvis dich nennen?</label>
+    <input type="text" id="name" placeholder="Sir">
+    <label for="key">Anthropic-API-Schlüssel (optional, für freie Gespräche mit Claude)</label>
+    <input type="password" id="key" placeholder="sk-ant-…">
+    <p>Der Schlüssel bleibt nur in diesem Browser (localStorage) und wird direkt an api.anthropic.com gesendet. Nutze ihn nur auf deinem eigenen Gerät. Ohne Schlüssel versteht Jarvis die lokalen Befehle.</p>
+    <label for="voice">Stimme</label>
+    <select id="voice"></select>
+    <div class="row" style="justify-content:flex-end;margin-top:16px">
+      <button value="cancel">Abbrechen</button>
+      <button value="ok" id="saveSet">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="module">
+// ---------- Speicher ----------
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('jarvis.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('jarvis.' + k, JSON.stringify(v)); } catch {} }
+};
+const $ = id => document.getElementById(id);
+const cfg = { name: store.get('name', 'Sir'), key: store.get('key', ''), voice: store.get('voice', ''), speak: store.get('speak', true) };
+let notes = store.get('notes', []);
+
+// ---------- Log ----------
+const log = $('log');
+function add(cls, text, html) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  if (html) d.innerHTML = html; else d.textContent = text;
+  log.appendChild(d); log.scrollTop = log.scrollHeight;
+  return d;
+}
+const setState = s => $('state').textContent = s;
+
+// ---------- Uhr ----------
+setInterval(() => $('clock').textContent = new Date().toLocaleTimeString('de-DE'), 1000);
+
+// ---------- Sprachausgabe ----------
+let voices = [];
+function loadVoices() {
+  voices = speechSynthesis.getVoices();
+  const sel = $('voice'); sel.innerHTML = '';
+  const de = voices.filter(v => v.lang.startsWith('de'));
+  (de.length ? de : voices).forEach(v => { const o = document.createElement('option'); o.value = v.name; o.textContent = `${v.name} (${v.lang})`; sel.appendChild(o); });
+  if (cfg.voice) sel.value = cfg.voice;
+}
+if ('speechSynthesis' in window) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+let speaking = 0;
+function speak(text) {
+  if (!cfg.speak || !('speechSynthesis' in window) || !text.trim()) return;
+  const u = new SpeechSynthesisUtterance(text.replace(/[*_#`]/g, '').replace(/https?:\/\/\S+/g, 'den Link'));
+  u.lang = 'de-DE'; u.rate = 1.02; u.pitch = .9;
+  const v = voices.find(v => v.name === cfg.voice) || voices.find(v => v.lang.startsWith('de'));
+  if (v) u.voice = v;
+  speaking++; pauseRec();
+  u.onend = u.onerror = () => { speaking = Math.max(0, speaking - 1); if (!speaking) resumeRec(); };
+  speechSynthesis.speak(u);
+}
+function say(text) { add('j', text); speak(text); }
+
+// ---------- Spracherkennung ----------
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, listening = false, wantListen = false, wakeMode = false;
+if (SR) {
+  rec = new SR(); rec.lang = 'de-DE'; rec.interimResults = true; rec.continuous = true;
+  rec.onresult = e => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i];
+      if (r.isFinal) handleSpoken(r[0].transcript.trim()); else interim += r[0].transcript;
+    }
+    $('interim').textContent = interim;
+  };
+  rec.onstart = () => { listening = true; updateMic(); };
+  rec.onend = () => { listening = false; updateMic(); $('interim').textContent = ''; if (wantListen && !speaking) setTimeout(startRec, 250); };
+  rec.onerror = e => { if (e.error === 'not-allowed') { wantListen = false; add('err', 'Kein Mikrofonzugriff. Bitte im Browser erlauben.'); } };
+}
+function startRec() { if (!rec || listening) return; try { rec.start(); } catch {} }
+function pauseRec() { if (rec && listening) try { rec.stop(); } catch {} }
+function resumeRec() { if (wantListen) startRec(); }
+function updateMic() {
+  const m = $('mic'); m.classList.toggle('on', listening); m.setAttribute('aria-pressed', listening);
+  m.textContent = listening ? 'HÖRT ZU' : 'MIKRO';
+  if (!busy) setState(listening ? (wakeMode ? 'Warte auf „Jarvis“' : 'Ich höre') : 'Bereit');
+}
+function toggleMic() {
+  if (!rec) { add('err', 'Spracherkennung wird von diesem Browser nicht unterstützt. Chrome oder Edge funktionieren am besten.'); return; }
+  speechSynthesis.cancel();
+  wantListen = !wantListen;
+  wantListen ? startRec() : pauseRec();
+}
+let pushOnce = false;
+function handleSpoken(t) {
+  if (!t) return;
+  if (wakeMode) {
+    const m = t.match(/\b(jarvis|dschawis|jarwis|tschawis)\b[,.!]?\s*(.*)/i);
+    if (!m) return;
+    if (!m[2]) { say(`Ja, ${cfg.name}?`); return; }
+    t = m[2];
+  } else if (pushOnce) { wantListen = false; pauseRec(); pushOnce = false; }
+  submit(t);
+}
+$('mic').onclick = () => { wakeMode = $('wake').checked; pushOnce = !wakeMode && !wantListen; toggleMic(); };
+$('reactor').onclick = () => $('mic').click();
+$('wake').onchange = e => {
+  wakeMode = e.target.checked; pushOnce = false;
+  if (wakeMode && !wantListen) toggleMic();
+  if (!wakeMode && wantListen) toggleMic();
+  updateMic();
+};
+$('speak').checked = cfg.speak;
+$('speak').onchange = e => { cfg.speak = e.target.checked; store.set('speak', cfg.speak); if (!cfg.speak) speechSynthesis.cancel(); };
+
+// ---------- Werkzeuge (lokal + für Claude) ----------
+const timers = new Map(); let timerId = 0;
+function renderTimers() {
+  const box = $('timers'); box.innerHTML = '';
+  for (const [, t] of timers) {
+    const s = Math.max(0, Math.round((t.end - Date.now()) / 1000));
+    const el = document.createElement('span'); el.className = 'timer';
+    el.textContent = `${t.label} ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; box.appendChild(el);
+  }
+}
+setInterval(renderTimers, 1000);
+function beep() {
+  try {
+    const ac = new AudioContext();
+    [0, .35, .7].forEach(t => { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 880; g.gain.setValueAtTime(.2, ac.currentTime + t); g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + t + .3); o.connect(g).connect(ac.destination); o.start(ac.currentTime + t); o.stop(ac.currentTime + t + .3); });
+  } catch {}
+}
+
+const tools = {
+  get_datetime() {
+    const d = new Date();
+    return { datum: d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }), uhrzeit: d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }), zeitzone: Intl.DateTimeFormat().resolvedOptions().timeZone };
+  },
+  set_timer({ seconds, label }) {
+    if (!(seconds > 0 && seconds <= 86400)) throw new Error('seconds muss zwischen 1 und 86400 liegen');
+    const id = ++timerId; label = label || 'Timer';
+    const end = Date.now() + seconds * 1000;
+    const h = setTimeout(() => { timers.delete(id); renderTimers(); beep(); say(`${cfg.name}, Ihr ${label} ist abgelaufen.`); if (Notification?.permission === 'granted') new Notification('Jarvis', { body: `${label} abgelaufen` }); }, seconds * 1000);
+    timers.set(id, { end, label, h }); renderTimers();
+    try { if (window.Notification && Notification.permission === 'default') Notification.requestPermission(); } catch {}
+    return { ok: true, id, label, endet_um: new Date(end).toLocaleTimeString('de-DE') };
+  },
+  cancel_timers() { for (const [, t] of timers) clearTimeout(t.h); const n = timers.size; timers.clear(); renderTimers(); return { abgebrochen: n }; },
+  save_note({ text }) { if (!text) throw new Error('text fehlt'); notes.push({ text, at: new Date().toISOString() }); store.set('notes', notes); return { ok: true, anzahl: notes.length }; },
+  list_notes() { return { notizen: notes.map((n, i) => `${i + 1}. ${n.text}`) }; },
+  clear_notes() { const n = notes.length; notes = []; store.set('notes', notes); return { geloescht: n }; },
+  async get_weather({ city } = {}) {
+    let lat, lon, place = city;
+    if (city) {
+      const g = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?count=1&language=de&name=${encodeURIComponent(city)}`)).json();
+      if (!g.results?.length) throw new Error(`Ort „${city}“ nicht gefunden`);
+      ({ latitude: lat, longitude: lon, name: place } = g.results[0]);
+    } else {
+      const pos = await new Promise((res, rej) => navigator.geolocation ? navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 }) : rej(new Error('Kein Standort')));
+      lat = pos.coords.latitude; lon = pos.coords.longitude; place = 'deinem Standort';
+    }
+    const w = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=1&timezone=auto`)).json();
+    return { ort: place, temperatur: w.current.temperature_2m, gefuehlt: w.current.apparent_temperature, wetter: WMO[w.current.weather_code] || 'unbekannt', wind_kmh: w.current.wind_speed_10m, max: w.daily.temperature_2m_max[0], min: w.daily.temperature_2m_min[0], regenwahrscheinlichkeit: w.daily.precipitation_probability_max[0] };
+  },
+  open_url({ url }) {
+    if (!/^https?:\/\//i.test(url || '')) throw new Error('Nur http(s)-Links');
+    const win = window.open(url, '_blank', 'noopener');
+    if (!win) add('sys', '', `Pop-up blockiert – <a href="${encodeURI(url)}" target="_blank" rel="noopener">hier öffnen</a>`);
+    return { geoeffnet: url };
+  }
+};
+const WMO = { 0: 'klar', 1: 'überwiegend klar', 2: 'teils bewölkt', 3: 'bedeckt', 45: 'Nebel', 48: 'Reifnebel', 51: 'leichter Niesel', 53: 'Niesel', 55: 'starker Niesel', 61: 'leichter Regen', 63: 'Regen', 65: 'starker Regen', 66: 'gefrierender Regen', 67: 'starker gefrierender Regen', 71: 'leichter Schneefall', 73: 'Schneefall', 75: 'starker Schneefall', 77: 'Schneegriesel', 80: 'Regenschauer', 81: 'kräftige Schauer', 82: 'heftige Schauer', 85: 'Schneeschauer', 86: 'starke Schneeschauer', 95: 'Gewitter', 96: 'Gewitter mit Hagel', 99: 'schweres Gewitter mit Hagel' };
+
+const toolDefs = [
+  { name: 'get_datetime', description: 'Aktuelles Datum, Uhrzeit und Zeitzone des Nutzers.', input_schema: { type: 'object', properties: {}, additionalProperties: false } },
+  { name: 'set_timer', description: 'Startet einen Timer/Wecker im Browser, der nach Ablauf klingelt und eine Ansage macht.', input_schema: { type: 'object', properties: { seconds: { type: 'integer', description: 'Dauer in Sekunden' }, label: { type: 'string', description: 'Kurzer Name, z. B. "Nudel-Timer"' } }, required: ['seconds'], additionalProperties: false } },
+  { name: 'cancel_timers', description: 'Bricht alle laufenden Timer ab.', input_schema: { type: 'object', properties: {}, additionalProperties: false } },
+  { name: 'save_note', description: 'Speichert eine Notiz oder einen Merkzettel-Eintrag dauerhaft im Browser.', input_schema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'], additionalProperties: false } },
+  { name: 'list_notes', description: 'Listet alle gespeicherten Notizen.', input_schema: { type: 'object', properties: {}, additionalProperties: false } },
+  { name: 'clear_notes', description: 'Löscht alle Notizen. Nur auf ausdrücklichen Wunsch.', input_schema: { type: 'object', properties: {}, additionalProperties: false } },
+  { name: 'get_weather', description: 'Aktuelles Wetter und Tagesvorhersage. Ohne city wird der Standort des Geräts genutzt.', input_schema: { type: 'object', properties: { city: { type: 'string' } }, additionalProperties: false } },
+  { name: 'open_url', description: 'Öffnet eine Webseite in einem neuen Tab.', input_schema: { type: 'object', properties: { url: { type: 'string' } }, required: ['url'], additionalProperties: false } }
+].map(t => ({ ...t, eager_input_streaming: true }));
+
+// Einfache Prüfung der Werkzeugeingaben gegen das Schema (bei Eager Streaming nötig)
+function validInput(name, input) {
+  const def = toolDefs.find(t => t.name === name);
+  if (!def || typeof input !== 'object' || input === null) return false;
+  const s = def.input_schema;
+  for (const r of s.required || []) if (!(r in input)) return false;
+  for (const [k, v] of Object.entries(input)) {
+    const p = s.properties[k]; if (!p) return false;
+    if (p.type === 'integer' && !Number.isInteger(v)) return false;
+    if (p.type === 'string' && typeof v !== 'string') return false;
+  }
+  return true;
+}
+
+// ---------- Lokale Befehle (ohne API-Schlüssel) ----------
+const num = s => { const w = { ein: 1, eine: 1, einen: 1, einer: 1, zwei: 2, drei: 3, vier: 4, fünf: 5, sechs: 6, sieben: 7, acht: 8, neun: 9, zehn: 10, fünfzehn: 15, zwanzig: 20, dreißig: 30, halbe: .5 }; return w[s?.toLowerCase()] ?? parseFloat(String(s).replace(',', '.')); };
+const JOKES = [
+  'Warum können Geister so schlecht lügen? Weil man durch sie hindurchsieht.',
+  'Ich habe versucht, einen Witz über UDP zu erzählen. Aber ich weiß nicht, ob er angekommen ist.',
+  'Was sagt ein Bit zum anderen? Wir sehen uns im Bus.',
+  'Es gibt 10 Arten von Menschen: die, die Binär verstehen, und die anderen.',
+  'Mein Arzt sagt, ich soll mehr an die frische Luft. Ich habe jetzt das Fenster im Browser offen.'
+];
+async function local(t) {
+  const s = t.toLowerCase().replace(/[?!.]+$/, '');
+  let m;
+  if (/^(hallo|hi|hey|guten (morgen|tag|abend)|servus|moin)\b/.test(s)) {
+    const h = new Date().getHours();
+    return `${h < 11 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend'}, ${cfg.name}. Wie kann ich helfen?`;
+  }
+  if (/wie spät|uhrzeit|wie viel uhr/.test(s)) return `Es ist ${tools.get_datetime().uhrzeit} Uhr, ${cfg.name}.`;
+  if (/welcher tag|datum|den wievielten|welches datum/.test(s)) return `Heute ist ${tools.get_datetime().datum}.`;
+  if ((m = s.match(/timer.*?(\d+(?:[.,]\d+)?|\w+)\s*(sekunden?|minuten?|stunden?)/)) || (m = s.match(/(?:in|nach)\s+(\d+(?:[.,]\d+)?|\w+)\s*(sekunden?|minuten?|stunden?).*?(?:erinner|weck|bescheid)/))) {
+    const n = num(m[1]); if (!(n > 0)) return null;
+    const mul = m[2].startsWith('sek') ? 1 : m[2].startsWith('min') ? 60 : 3600;
+    tools.set_timer({ seconds: Math.round(n * mul), label: 'Timer' });
+    return `Timer läuft: ${m[1]} ${m[2][0].toUpperCase() + m[2].slice(1)}.`;
+  }
+  if (/timer (stopp|abbrechen|löschen|aus)|stopp(e)? (den |alle )?timer/.test(s)) { const r = tools.cancel_timers(); return r.abgebrochen ? 'Alle Timer abgebrochen.' : 'Es läuft kein Timer.'; }
+  if ((m = t.match(/^(?:notiz|notiere|merke dir|merk dir|schreib auf)[:,]?\s+(.+)/i))) { tools.save_note({ text: m[1] }); return 'Notiert.'; }
+  if (/(zeig|lies|was sind|liste).*(notizen)|^notizen$/.test(s)) { const n = tools.list_notes().notizen; return n.length ? 'Deine Notizen:\n' + n.join('\n') : 'Du hast noch keine Notizen.'; }
+  if (/notizen (löschen|leeren)|lösche (alle )?notizen/.test(s)) { tools.clear_notes(); return 'Alle Notizen gelöscht.'; }
+  if (/wetter/.test(s)) {
+    m = s.match(/wetter (?:in|für|von)\s+([a-zäöüß .-]+)/);
+    try {
+      const w = await tools.get_weather({ city: m?.[1]?.trim() });
+      return `In ${w.ort} ist es ${w.wetter} bei ${Math.round(w.temperatur)} Grad, gefühlt ${Math.round(w.gefuehlt)}. Heute zwischen ${Math.round(w.min)} und ${Math.round(w.max)} Grad, Regenwahrscheinlichkeit ${w.regenwahrscheinlichkeit} Prozent.`;
+    } catch (e) { return `Das Wetter konnte ich nicht abrufen: ${e.message}. Sag zum Beispiel „Wetter in Berlin“.`; }
+  }
+  if ((m = s.match(/^(?:was ist|rechne|wie viel ist|berechne)\s+([\d\s+\-*/().,x×÷^%]+|.*(?:plus|minus|mal|geteilt).*)$/))) {
+    let e = m[1].replace(/plus/g, '+').replace(/minus/g, '-').replace(/mal|x|×/g, '*').replace(/geteilt durch|durch|÷/g, '/').replace(/hoch|\^/g, '**').replace(/,/g, '.');
+    if (/^[\d\s+\-*/().]+$/.test(e)) { try { const r = Function(`"use strict";return (${e})`)(); if (Number.isFinite(r)) return `Das ergibt ${(+r.toFixed(10)).toLocaleString('de-DE')}.`; } catch {} }
+  }
+  if ((m = s.match(/^(?:öffne|geh auf|gehe zu|starte)\s+(.+)/))) {
+    const sites = { youtube: 'https://www.youtube.com', google: 'https://www.google.com', wikipedia: 'https://de.wikipedia.org', netflix: 'https://www.netflix.com', spotify: 'https://open.spotify.com', gmail: 'https://mail.google.com', maps: 'https://maps.google.com', 'google maps': 'https://maps.google.com', github: 'https://github.com', amazon: 'https://www.amazon.de', kachelduell: './index.html', 'das spiel': './index.html' };
+    const k = m[1].trim(); let url = sites[k] || (/^[\w-]+(\.[\w-]+)+/.test(k) ? 'https://' + k.replace(/\s/g, '') : null);
+    if (url) { if (url.startsWith('./')) location.href = url; else tools.open_url({ url }); return `Öffne ${k}.`; }
+  }
+  if ((m = s.match(/^(?:suche?|google)\s+(?:nach\s+)?(.+)/))) { tools.open_url({ url: 'https://www.google.com/search?q=' + encodeURIComponent(m[1]) }); return `Suche nach „${m[1]}“.`; }
+  if ((m = s.match(/^(?:wer|was) (?:ist|war|sind|waren)\s+(.+)/)) && !cfg.key) {
+    try {
+      const r = await (await fetch('https://de.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(m[1].replace(/^(der|die|das|ein|eine)\s+/, '').replace(/\s/g, '_')))).json();
+      if (r.extract) return r.extract.split(/(?<=\.)\s/).slice(0, 3).join(' ');
+    } catch {}
+  }
+  if (/witz/.test(s)) return JOKES[Math.floor(Math.random() * JOKES.length)];
+  if (/wer bist du|wie heißt du|was kannst du/.test(s)) return `Ich bin J.A.R.V.I.S., Ihr persönlicher Assistent. ${cfg.key ? 'Mit Claude als Gehirn kann ich fast jede Frage beantworten.' : 'Ohne API-Schlüssel kenne ich Uhrzeit, Datum, Timer, Notizen, Wetter, Rechnen, Webseiten, Suche, Wikipedia und Witze. Mit Schlüssel in den Einstellungen kann ich frei mit dir reden.'}`;
+  if (/^(danke|vielen dank|dankeschön)/.test(s)) return `Immer gern, ${cfg.name}.`;
+  if (/^(stopp|halt|ruhe|sei still|schweig)/.test(s)) { speechSynthesis.cancel(); return ''; }
+  return null;
+}
+
+// ---------- Claude ----------
+let Anthropic = null, client = null, history = store.get('history', []);
+async function getClient() {
+  if (!cfg.key) return null;
+  if (!Anthropic) Anthropic = (await import('https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@1.6.0/+esm')).default;
+  if (!client || client.apiKey !== cfg.key) client = new Anthropic({ apiKey: cfg.key, dangerouslyAllowBrowser: true });
+  return client;
+}
+const SYSTEM = () => `Du bist J.A.R.V.I.S., ein persönlicher KI-Assistent im Stil eines höflichen, trockenen britischen Butlers, der Deutsch spricht. Du sprichst den Nutzer mit "${cfg.name}" an. Deine Antworten werden laut vorgelesen: antworte knapp, natürlich und gesprochen (meist 1–3 Sätze), ohne Markdown, Listen, Emojis oder Tabellen, außer der Nutzer will ausdrücklich etwas Ausführliches. Nutze die Werkzeuge für Uhrzeit, Timer, Notizen, Wetter und Webseiten; für aktuelle Ereignisse oder Fakten, die du nicht sicher weißt, nutze die Websuche. Erfinde keine Ergebnisse von Werkzeugen.`;
+
+async function askClaude(text) {
+  const c = await getClient();
+  history.push({ role: 'user', content: text });
+  const bubble = add('j', '');
+  let spoken = '';
+  for (let step = 0; step < 8; step++) {
+    const stream = c.beta.messages.stream({
+      model: 'claude-opus-5-5',
+      max_tokens: 64000,
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',
+      output_config: { effort: 'low' },
+      system: SYSTEM(),
+      tools: [...toolDefs, { type: 'web_search_20260209', name: 'web_search', max_uses: 3 }],
+      messages: history
+    });
+    let buf = '';
+    stream.on('text', delta => {
+      bubble.textContent += delta; buf += delta; log.scrollTop = log.scrollHeight;
+      // satzweise vorlesen, damit Jarvis früh zu sprechen beginnt
+      const m = buf.match(/^([\s\S]*?[.!?…:])(\s+)([\s\S]*)$/);
+      if (m && m[1].length > 12) { speak(m[1]); spoken += m[1]; buf = m[3]; }
+    });
+    const msg = await stream.finalMessage();
+    if (buf.trim()) { speak(buf); buf = ''; }
+    if (msg.stop_reason === 'refusal') {
+      history.pop();
+      if (!bubble.textContent) bubble.remove();
+      say('Dabei kann ich leider nicht helfen.');
+      break;
+    }
+    history.push({ role: 'assistant', content: msg.content });
+    if (msg.stop_reason === 'max_tokens') { add('sys', '(Antwort wurde abgeschnitten)'); break; }
+    if (msg.stop_reason === 'pause_turn') continue;
+    if (msg.stop_reason !== 'tool_use') break;
+    const results = [];
+    for (const b of msg.content.filter(b => b.type === 'tool_use')) {
+      setState('Führe aus: ' + b.name);
+      try {
+        if (!validInput(b.name, b.input)) throw new Error('Ungültige Eingabe für ' + b.name);
+        const r = await tools[b.name](b.input);
+        results.push({ type: 'tool_result', tool_use_id: b.id, content: JSON.stringify(r) });
+      } catch (e) {
+        results.push({ type: 'tool_result', tool_use_id: b.id, content: String(e.message || e), is_error: true });
+      }
+    }
+    history.push({ role: 'user', content: results });
+    if (bubble.textContent && !bubble.textContent.endsWith('\n')) bubble.textContent += '\n';
+    setState('Denke nach');
+  }
+  if (!bubble.textContent.trim()) bubble.remove();
+  // Verlauf begrenzen: nur an einer Nutzer-Textnachricht abschneiden
+  if (history.length > 40) {
+    let i = history.length - 30;
+    while (i < history.length && !(history[i].role === 'user' && typeof history[i].content === 'string')) i++;
+    history = history.slice(i);
+  }
+  store.set('history', history);
+}
+
+// ---------- Ablauf ----------
+let busy = false;
+async function submit(text) {
+  text = text.trim(); if (!text || busy) return;
+  add('me', text);
+  busy = true; setState('Denke nach');
+  try {
+    const hasKey = !!cfg.key;
+    // Mit Schlüssel: nur die schnellen, eindeutigen Befehle lokal, der Rest geht an Claude
+    const quick = /^(stopp|halt|ruhe|sei still|danke)|timer|notiz|notiere|merk|öffne|^suche?\b/i.test(text);
+    const r = (!hasKey || quick) ? await local(text) : null;
+    if (r !== null) { if (r) say(r); }
+    else if (hasKey) await askClaude(text);
+    else say(`Das verstehe ich ohne Claude noch nicht, ${cfg.name}. Trag in den Einstellungen einen API-Schlüssel ein, dann kann ich frei antworten. Tippe auf „Befehle“, um zu sehen, was ich schon kann.`);
+  } catch (e) {
+    console.error(e);
+    const st = e?.status;
+    add('err', st === 401 ? 'API-Schlüssel ungültig. Bitte in den Einstellungen prüfen.' : st === 429 ? 'Zu viele Anfragen, bitte kurz warten.' : st === 529 || st >= 500 ? 'Claude ist gerade überlastet. Bitte gleich nochmal.' : 'Fehler: ' + (e?.message || e));
+    // fehlgeschlagene Nutzernachricht nicht im Verlauf lassen
+    if (history.length && history[history.length - 1].role === 'user' && typeof history[history.length - 1].content === 'string') history.pop();
+  } finally { busy = false; updateMic(); }
+}
+$('form').onsubmit = e => { e.preventDefault(); const v = $('input').value; $('input').value = ''; submit(v); };
+
+// ---------- Einstellungen ----------
+function refreshAi() { $('aiState').textContent = cfg.key ? 'CLAUDE' : 'LOKAL'; }
+$('setBtn').onclick = () => { $('name').value = cfg.name; $('key').value = cfg.key; loadVoices(); $('settings').showModal(); };
+$('settings').addEventListener('close', () => {
+  if ($('settings').returnValue !== 'ok') return;
+  cfg.name = $('name').value.trim() || 'Sir'; cfg.key = $('key').value.trim(); cfg.voice = $('voice').value;
+  store.set('name', cfg.name); store.set('key', cfg.key); store.set('voice', cfg.voice);
+  refreshAi(); add('sys', 'Einstellungen gespeichert.');
+});
+$('clearBtn').onclick = () => { history = []; store.set('history', []); log.innerHTML = ''; add('sys', 'Verlauf geleert.'); };
+$('helpBtn').onclick = () => add('sys', '', `<b>Beispiele</b><br>„Wie spät ist es?“ · „Welches Datum ist heute?“<br>„Stell einen Timer auf 5 Minuten“ · „Timer stoppen“<br>„Notiz: Milch kaufen“ · „Zeig meine Notizen“<br>„Wie ist das Wetter in Hamburg?“ · „Rechne 12 mal 7“<br>„Öffne YouTube“ · „Suche nach Pizza in der Nähe“<br>„Wer ist Ada Lovelace?“ · „Erzähl einen Witz“<br>${cfg.key ? 'Mit Claude kannst du außerdem alles fragen.' : 'Mit API-Schlüssel (Einstellungen) kannst du frei mit Jarvis reden.'}`);
+refreshAi();
+
+// ---------- Arc-Reaktor-Animation ----------
+const cv = $('reactor'), ctx = cv.getContext('2d');
+let level = 0, t0 = performance.now();
+function frame(now) {
+  const t = (now - t0) / 1000, W = cv.width, c = W / 2;
+  const active = busy ? 1 : listening ? .6 : speaking ? .9 : .25;
+  level += (active - level) * .06;
+  ctx.clearRect(0, 0, W, W);
+  const glow = ctx.createRadialGradient(c, c, 10, c, c, W * .48);
+  glow.addColorStop(0, `rgba(120,230,255,${.55 + .35 * level})`); glow.addColorStop(.3, `rgba(40,170,230,${.18 + .2 * level})`); glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, W);
+  ctx.lineCap = 'round';
+  const rings = [[.42, 3, .25, 24], [.36, 6, -.5, 10], [.29, 2, .9, 40], [.22, 10, -1.4, 6]];
+  rings.forEach(([r, w, sp, seg], i) => {
+    ctx.save(); ctx.translate(c, c); ctx.rotate(t * sp * (.4 + level));
+    ctx.strokeStyle = `rgba(79,214,255,${.35 + .5 * level - i * .05})`; ctx.lineWidth = w;
+    ctx.shadowColor = '#4fd6ff'; ctx.shadowBlur = 12 * level;
+    for (let k = 0; k < seg; k++) { const a = k / seg * Math.PI * 2; ctx.beginPath(); ctx.arc(0, 0, W * r, a, a + Math.PI * 2 / seg * .62); ctx.stroke(); }
+    ctx.restore();
+  });
+  // pulsierender Kern
+  const pulse = 1 + Math.sin(t * (busy ? 9 : speaking ? 6 : 2)) * .06 * (1 + level);
+  ctx.beginPath(); ctx.arc(c, c, W * .12 * pulse, 0, Math.PI * 2);
+  const core = ctx.createRadialGradient(c, c, 0, c, c, W * .12 * pulse);
+  core.addColorStop(0, '#ffffff'); core.addColorStop(.5, '#9ef0ff'); core.addColorStop(1, 'rgba(79,214,255,.2)');
+  ctx.fillStyle = core; ctx.shadowColor = '#4fd6ff'; ctx.shadowBlur = 40; ctx.fill(); ctx.shadowBlur = 0;
+  // Dreieck wie im Reaktor
+  ctx.save(); ctx.translate(c, c); ctx.rotate(-t * .2); ctx.strokeStyle = `rgba(200,245,255,${.4 + .4 * level})`; ctx.lineWidth = 3;
+  ctx.beginPath(); for (let k = 0; k < 3; k++) { const a = k / 3 * Math.PI * 2 - Math.PI / 2; ctx.lineTo(Math.cos(a) * W * .17, Math.sin(a) * W * .17); } ctx.closePath(); ctx.stroke(); ctx.restore();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ---------- Begrüßung ----------
+add('sys', 'Tippe auf den Reaktor oder „MIKRO“, um zu sprechen, oder schreib unten. Sprache funktioniert am besten in Chrome oder Edge.');
+const h = new Date().getHours();
+add('j', `${h < 11 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend'}, ${cfg.name}. Alle Systeme sind online.`);
+</script>
+</body>
+</html>
